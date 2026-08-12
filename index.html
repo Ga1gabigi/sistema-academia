@@ -76,6 +76,8 @@
             { dni: "60102454", nombres: "GIOVANNI", apellidos: "SOTO CAMPOS", area: "Área I", telefono: "930268614", apoderado: "CAMPOS PAUCAR MAGALY DORIS", telApoderado: "930268614" },
             { dni: "72345678", nombres: "Carlos Daniel", apellidos: "Mendoza Ruiz", area: "Área I", telefono: "987654321", apoderado: "Roberto Mendoza", telApoderado: "912345678" }
         ];
+        let dbNotas = [];
+        let dbAsistencias = [];
         let dbMateriales = [
             { area: "Área I", semana: "Semana 1", titulo: "Solucionario Razonamiento Matemático Sem 1", examen: "#" },
             { area: "Área II", semana: "Semana 1", titulo: "Examen Resuelto Física y Álgebra", examen: "#" }
@@ -154,7 +156,7 @@
                 <div class="flex justify-between items-center mb-8">
                     <div>
                         <h2 class="text-2xl font-black text-white tracking-tight">Dashboard General y Estadísticas</h2>
-                        <p class="text-slate-400 text-xs mt-1">Ciclo Académico 2026 — Monitoreo Instantáneo</p>
+                        <p class="text-slate-400 text-xs mt-1">Ciclo Académico 2026</p>
                     </div>
                     <span class="bg-slate-900 border border-slate-800 text-indigo-400 text-xs px-4 py-2 rounded-xl font-bold">📅 11/08/2026</span>
                 </div>
@@ -164,51 +166,7 @@
                     <div class="bg-slate-900/90 p-6 rounded-3xl shadow-lg border border-slate-800"><p class="text-[10px] text-slate-400 font-black uppercase tracking-wider">Asistencia Promedio</p><h3 class="text-3xl font-black text-blue-400 mt-2">94.2%</h3></div>
                     <div class="bg-slate-900/90 p-6 rounded-3xl shadow-lg border border-slate-800"><p class="text-[10px] text-slate-400 font-black uppercase tracking-wider">Áreas Activas</p><h3 class="text-3xl font-black text-amber-400 mt-2">4 Áreas (I - IV)</h3></div>
                 </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <div class="bg-slate-900/90 p-6 rounded-3xl shadow-lg border border-slate-800">
-                        <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-white text-sm">Alumnos en Riesgo (Alerta Temprana)</h3><span class="bg-rose-500/10 text-rose-400 text-[10px] font-bold px-2.5 py-1 rounded-full border border-rose-500/20">Promedio < 11.0</span></div>
-                        <p class="text-xs text-slate-400 py-6 text-center">¡Excelente! No hay alumnos en riesgo académico (< 11.0).</p>
-                    </div>
-                    <div class="bg-slate-900/90 p-6 rounded-3xl shadow-lg border border-slate-800">
-                        <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-white text-sm">Cuadro de Honor (Top Estudiantes)</h3><span class="bg-amber-500/10 text-amber-400 text-[10px] font-bold px-2.5 py-1 rounded-full border border-amber-500/20">Excelencia</span></div>
-                        <div class="space-y-3">
-                            <div class="flex justify-between items-center p-3 bg-slate-950 rounded-2xl text-xs"><span class="font-bold text-white">1. Salas Ramos, José Miguel</span><span class="bg-indigo-500/10 text-indigo-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-indigo-500/20">Área IV</span><span class="font-black text-emerald-400">17.6 / 20</span></div>
-                            <div class="flex justify-between items-center p-3 bg-slate-950 rounded-2xl text-xs"><span class="font-bold text-white">2. Ríos Vega, María Alejandra</span><span class="bg-indigo-500/10 text-indigo-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-indigo-500/20">Área III</span><span class="font-black text-emerald-400">16.8 / 20</span></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="bg-slate-900/90 p-6 rounded-3xl shadow-lg border border-slate-800">
-                        <h3 class="font-bold text-white text-sm mb-4">Evolución de Notas Promedio por Semana (1 - 10)</h3>
-                        <canvas id="evolutionChart" height="120"></canvas>
-                    </div>
-                    <div class="bg-slate-900/90 p-6 rounded-3xl shadow-lg border border-slate-800 flex flex-col items-center justify-center">
-                        <h3 class="font-bold text-white text-sm mb-2 self-start">Distribución de Alumnos por Área</h3>
-                        <div class="w-48 h-48"><canvas id="areaChart"></canvas></div>
-                    </div>
-                </div>
             `;
-
-            setTimeout(() => {
-                new Chart(document.getElementById('evolutionChart').getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6', 'Sem 7', 'Sem 8', 'Sem 9', 'Sem 10'],
-                        datasets: [{ label: 'Promedio', data: [13.2, 14.5, 14.0, 15.2, 14.8, 15.5, 15.0, 16.1, 16.0, 16.3], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.1)', fill: true, tension: 0.3 }]
-                    },
-                    options: { plugins: { legend: { display: false } } }
-                });
-
-                new Chart(document.getElementById('areaChart').getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Área I', 'Área II', 'Área III', 'Área IV'],
-                        datasets: [{ data: [2, 1, 1, 1], backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6'] }]
-                    }
-                });
-            }, 100);
         }
 
         function renderAdminEstudiantes() {
@@ -307,7 +265,7 @@
                             <option value="Área I">Área I</option><option value="Área II">Área II</option><option value="Área III">Área III</option><option value="Área IV">Área IV</option>
                         </select>
                         <input type="date" id="asist-fecha" class="p-3 bg-slate-950 border border-slate-800 text-white rounded-xl text-xs font-bold">
-                        <button onclick="alert('¡Asistencia guardada!')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition">Guardar Asistencia</button>
+                        <button onclick="guardarAsistenciaReal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition">Guardar Asistencia</button>
                     </div>
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-950 text-slate-400 font-bold uppercase border-b border-slate-800"><th class="p-3">#</th><th class="p-3">Estudiante</th><th class="p-3">DNI</th><th class="p-3 text-center">Estado</th><th class="p-3">Apoderado</th></thead>
@@ -328,16 +286,30 @@
                     <td class="p-3 font-bold text-white">${e.apellidos}, ${e.nombres}</td>
                     <td class="p-3 text-slate-400">${e.dni}</td>
                     <td class="p-3 text-center space-x-3">
-                        <label class="font-bold text-emerald-400"><input type="radio" name="asist_${e.dni}" checked class="accent-emerald-500"> Presente</label>
-                        <label class="font-bold text-amber-400"><input type="radio" name="asist_${e.dni}" class="accent-amber-500"> Tardanza</label>
-                        <label class="font-bold text-rose-400"><input type="radio" name="asist_${e.dni}" class="accent-rose-500"> Falta</label>
+                        <label class="font-bold text-emerald-400"><input type="radio" name="asist_${e.dni}" value="Presente" checked class="accent-emerald-500"> Presente</label>
+                        <label class="font-bold text-amber-400"><input type="radio" name="asist_${e.dni}" value="Tardanza" class="accent-amber-500"> Tardanza</label>
+                        <label class="font-bold text-rose-400"><input type="radio" name="asist_${e.dni}" value="Falta" class="accent-rose-500"> Falta</label>
                     </td>
                     <td class="p-3 text-slate-300">${e.apoderado}<br><span class="text-[11px] text-slate-500">${e.telApoderado}</span></td>
                 </tr>
             `).join('') || `<tr><td colspan="5" class="p-6 text-center text-slate-500">No hay estudiantes en esta área.</td></tr>`;
         }
 
-        // REGISTRO DE NOTAS FUNCIONAL
+        async function guardarAsistenciaReal() {
+            let fecha = document.getElementById('asist-fecha').value;
+            let areaSel = document.getElementById('asist-area').value;
+            let filtrados = dbEstudiantes.filter(e => e.area === areaSel);
+            for(let e of filtrados) {
+                let radios = document.getElementsByName(`asist_${e.dni}`);
+                let estado = "Presente";
+                for(let r of radios) { if(r.checked) estado = r.value; }
+                dbAsistencias.push({ dni: e.dni, fecha, area: e.area, estado });
+                await enviarASpreadsheet("Asistencias", [e.dni, fecha, "Semana 1", estado, "Ninguna", e.area]);
+            }
+            alert("¡Asistencia guardada con éxito!");
+        }
+
+        // REGISTRO DE NOTAS 100% DINÁMICO
         function renderAdminNotas() {
             document.getElementById('main-content-area').innerHTML = `
                 <div class="flex justify-between items-center mb-6">
@@ -394,13 +366,14 @@
             let filtrados = dbEstudiantes.filter(e => e.area === area);
             for(let e of filtrados) {
                 let b = parseFloat(document.getElementById(`buenas_${e.dni}`).value) || 0;
-                let nota = (b * 0.4).toFixed(1);
-                await enviarASpreadsheet("Notas", [e.dni, semana, b, nota, area]);
+                let notaVal = (b * 0.4).toFixed(1);
+                dbNotas.push({ dni: e.dni, semana, buenas: b, nota: notaVal });
+                await enviarASpreadsheet("Notas", [e.dni, semana, b, notaVal, area]);
             }
             alert("¡Notas guardadas correctamente!");
         }
 
-        // BIBLIOTECA DE EXÁMENES FUNCIONAL
+        // BIBLIOTECA DE EXÁMENES
         function renderAdminMateriales() {
             document.getElementById('main-content-area').innerHTML = `
                 <div class="flex justify-between items-center mb-6">
@@ -447,7 +420,7 @@
             renderAdminMateriales();
         }
 
-        // PORTAL ESTUDIANTE ÉLITE CON MATERIALES Y NOTAS REALES
+        // PORTAL ESTUDIANTE DINÁMICO (MUESTRA LAS NOTAS Y ASISTENCIA REALES DEL ALUMNO)
         function initStudentPanel() {
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('app-screen').classList.remove('hidden');
@@ -462,7 +435,13 @@
         }
 
         function renderStudentPortal() {
+            let notasEstudiante = dbNotas.filter(n => n.dni === currentUser.dni);
+            let asistenciasEstudiante = dbAsistencias.filter(a => a.dni === currentUser.dni);
             let mats = dbMateriales.filter(m => m.area === currentUser.area || m.area === "General");
+
+            let sumaNotas = notasEstudiante.reduce((acc, curr) => acc + parseFloat(curr.nota), 0);
+            let promedioGeneral = notasEstudiante.length > 0 ? (sumaNotas / notasEstudiante.length).toFixed(1) : "0.0";
+
             document.getElementById('main-content-area').innerHTML = `
                 <div class="flex justify-between items-center mb-6">
                     <div>
@@ -481,11 +460,11 @@
                     <div class="flex items-center space-x-6 bg-slate-950/60 p-5 rounded-2xl border border-slate-800">
                         <div class="text-center px-4 border-r border-slate-800">
                             <p class="text-[10px] font-bold text-slate-400 uppercase">Promedio General</p>
-                            <p class="text-2xl font-black text-emerald-400 mt-0.5">13.2</p>
+                            <p class="text-2xl font-black text-emerald-400 mt-0.5">${promedioGeneral}</p>
                         </div>
                         <div class="text-center px-4">
                             <p class="text-[10px] font-bold text-slate-400 uppercase">Ranking en Área</p>
-                            <p class="text-2xl font-black text-indigo-400 mt-0.5">#2</p>
+                            <p class="text-2xl font-black text-indigo-400 mt-0.5">#1</p>
                         </div>
                     </div>
                     <button onclick="alert('Generando Boleta Mensual PDF...');" class="bg-white hover:bg-slate-100 text-slate-950 px-6 py-3.5 rounded-2xl font-extrabold text-xs uppercase tracking-wider shadow-xl transition">📥 Descargar Boleta PDF</button>
@@ -498,8 +477,14 @@
                             <table class="w-full text-left text-xs">
                                 <thead class="bg-slate-950 sticky top-0"><tr class="text-slate-400 font-bold uppercase border-b border-slate-800"><th class="p-3">Semana</th><th class="p-3 text-center">Buenas (50)</th><th class="p-3 text-center">Nota (20)</th><th class="p-3 text-center">Condición</th></tr></thead>
                                 <tbody class="divide-y divide-slate-800/60">
-                                    <tr><td class="p-3 font-bold text-white">Semana 1</td><td class="p-3 text-center text-slate-300">5 / 50</td><td class="p-3 text-center font-bold text-indigo-400">2.0 / 20</td><td class="p-3 text-center"><span class="bg-amber-500/10 text-amber-400 text-[10px] px-2.5 py-0.5 rounded-full font-bold border border-amber-500/20">Reforzar</span></td></tr>
-                                    <tr><td class="p-3 font-bold text-white">Semana 2</td><td class="p-3 text-center text-slate-300">36 / 50</td><td class="p-3 text-center font-bold text-indigo-400">14.4 / 20</td><td class="p-3 text-center"><span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2.5 py-0.5 rounded-full font-bold border border-emerald-500/20">Aprobado</span></td></tr>
+                                    ${notasEstudiante.length > 0 ? notasEstudiante.map(n => `
+                                        <tr>
+                                            <td class="p-3 font-bold text-white">${n.semana}</td>
+                                            <td class="p-3 text-center text-slate-300">${n.buenas} / 50</td>
+                                            <td class="p-3 text-center font-bold text-indigo-400">${n.nota} / 20</td>
+                                            <td class="p-3 text-center"><span class="${parseFloat(n.nota) >= 11 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'} text-[10px] px-2.5 py-0.5 rounded-full font-bold border">${parseFloat(n.nota) >= 11 ? 'Aprobado' : 'Reforzar'}</span></td>
+                                        </tr>
+                                    `).join('') : `<tr><td colspan="4" class="p-6 text-center text-slate-500">Aún no hay notas registradas por la tutora.</td></tr>`}
                                 </tbody>
                             </table>
                         </div>
@@ -511,7 +496,13 @@
                             <table class="w-full text-left text-xs">
                                 <thead class="bg-slate-950 sticky top-0"><tr class="text-slate-400 font-bold uppercase border-b border-slate-800"><th class="p-3">Fecha</th><th class="p-3">Área</th><th class="p-3 text-right">Estado</th></tr></thead>
                                 <tbody class="divide-y divide-slate-800/60">
-                                    <tr><td class="p-3 font-bold text-white">2026-08-12</td><td class="p-3 text-slate-400">${currentUser.area}</td><td class="p-3 text-right"><span class="bg-emerald-500/10 text-emerald-400 font-bold px-2.5 py-1 rounded-full text-[10px] border border-emerald-500/20">Presente</span></td></tr>
+                                    ${asistenciasEstudiante.length > 0 ? asistenciasEstudiante.map(a => `
+                                        <tr>
+                                            <td class="p-3 font-bold text-white">${a.fecha}</td>
+                                            <td class="p-3 text-slate-400">${a.area}</td>
+                                            <td class="p-3 text-right"><span class="bg-emerald-500/10 text-emerald-400 font-bold px-2.5 py-1 rounded-full text-[10px] border border-emerald-500/20">${a.estado}</span></td>
+                                        </tr>
+                                    `).join('') : `<tr><td colspan="3" class="p-6 text-center text-slate-500">No hay registros de asistencia todavía.</td></tr>`}
                                 </tbody>
                             </table>
                         </div>
