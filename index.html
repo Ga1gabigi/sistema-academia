@@ -73,15 +73,27 @@
     <script>
         let currentUser = null;
         let dbEstudiantes = [
-            { dni: "60102454", nombres: "GIOVANNI", apellidos: "SOTO CAMPOS", area: "Área I", telefono: "930268614", apoderado: "CAMPOS PAUCAR MAGALY DORIS", telApoderado: "930268614" },
-            { dni: "72345678", nombres: "Carlos Daniel", apellidos: "Mendoza Ruiz", area: "Área I", telefono: "987654321", apoderado: "Roberto Mendoza", telApoderado: "912345678" }
+            { dni: "60102454", nombres: "GIOVANNI", apellidos: "SOTO CAMPOS", area: "Área I", telefono: "930268614", apoderado: "CAMPOS PAUCAR MAGALY DORIS", telApoderado: "930268614" }
         ];
         let dbNotas = [];
         let dbAsistencias = [];
         let dbMateriales = [
-            { area: "Área I", semana: "Semana 1", titulo: "Solucionario Razonamiento Matemático Sem 1", examen: "#" },
-            { area: "Área II", semana: "Semana 1", titulo: "Examen Resuelto Física y Álgebra", examen: "#" }
+            { area: "Área I", semana: "Semana 1", titulo: "Solucionario Razonamiento Matemático Sem 1", examen: "#" }
         ];
+
+        // Cargar datos sincronizados desde Google Sheets al iniciar
+        async function cargarDatosRemotos() {
+            try {
+                let res = await fetch(`${API_URL}?sheet=Estudiantes`);
+                let data = await res.json();
+                if(data && data.length > 1) {
+                    dbEstudiantes = data.slice(1).map(r => ({
+                        dni: r[0], nombres: r[1], apellidos: r[2] || "", area: r[3], telefono: r[4], apoderado: r[5], telApoderado: r[6] || ""
+                    }));
+                }
+            } catch(e) { console.error("Error sincronizando estudiantes", e); }
+        }
+        cargarDatosRemotos();
 
         function switchLoginTab(tipo) {
             if(tipo === 'admin') {
@@ -107,8 +119,9 @@
             } catch (e) { console.error(e); }
         }
 
-        function loginAdmin() {
+        async function loginAdmin() {
             if(document.getElementById('admin-user').value === "admin" && document.getElementById('admin-pass').value === "admin2026") {
+                await cargarDatosRemotos();
                 currentUser = { role: "admin" };
                 initAdminPanel();
             } else {
@@ -116,9 +129,10 @@
             }
         }
 
-        function loginStudent() {
+        async function loginStudent() {
             let dni = document.getElementById('student-dni').value.trim();
             if(dni.length !== 8) { alert("Ingresa un DNI válido de 8 dígitos."); return; }
+            await cargarDatosRemotos();
             let est = dbEstudiantes.find(e => e.dni === dni);
             if(!est) {
                 alert("DNI no registrado en el sistema. Verifique con la tutora.");
@@ -207,7 +221,7 @@
                     </div>
 
                     <div class="lg:col-span-2 bg-slate-900/90 p-6 rounded-3xl shadow-lg border border-slate-800">
-                        <h3 class="font-bold text-white text-sm mb-4">Directorio de Estudiantes</h3>
+                        <h3 class="font-bold text-white text-sm mb-4">Directorio de Estudiantes (Sincronizado)</h3>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left text-xs">
                                 <thead class="bg-slate-950 text-slate-400 font-bold uppercase border-b border-slate-800"><th class="p-3">Estudiante / DNI</th><th class="p-3">Área</th><th class="p-3">Contacto</th><th class="p-3">Apoderado</th><th class="p-3 text-center">Acciones</th></thead>
@@ -242,7 +256,7 @@
 
             dbEstudiantes.push({ dni, nombres, apellidos, area, telefono, apoderado, telApoderado });
             await enviarASpreadsheet("Estudiantes", [dni, nombres, apellidos, area, telefono, apoderado, telApoderado]);
-            alert("¡Estudiante registrado con éxito!");
+            alert("¡Estudiante registrado y guardado permanentemente en Google Sheets!");
             renderAdminEstudiantes();
         }
 
@@ -306,10 +320,9 @@
                 dbAsistencias.push({ dni: e.dni, fecha, area: e.area, estado });
                 await enviarASpreadsheet("Asistencias", [e.dni, fecha, "Semana 1", estado, "Ninguna", e.area]);
             }
-            alert("¡Asistencia guardada con éxito!");
+            alert("¡Asistencia guardada y enviada a Google Sheets!");
         }
 
-        // REGISTRO DE NOTAS 100% DINÁMICO
         function renderAdminNotas() {
             document.getElementById('main-content-area').innerHTML = `
                 <div class="flex justify-between items-center mb-6">
@@ -370,10 +383,9 @@
                 dbNotas.push({ dni: e.dni, semana, buenas: b, nota: notaVal });
                 await enviarASpreadsheet("Notas", [e.dni, semana, b, notaVal, area]);
             }
-            alert("¡Notas guardadas correctamente!");
+            alert("¡Notas guardadas y enviadas a Google Sheets!");
         }
 
-        // BIBLIOTECA DE EXÁMENES
         function renderAdminMateriales() {
             document.getElementById('main-content-area').innerHTML = `
                 <div class="flex justify-between items-center mb-6">
@@ -381,7 +393,7 @@
                         <h2 class="text-2xl font-black text-white tracking-tight">Biblioteca de Exámenes y Solucionarios</h2>
                         <p class="text-slate-400 text-xs mt-1">Material de repaso oficial para los estudiantes.</p>
                     </div>
-                    <button onclick="abrirModalMaterial()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-600/20 transition">☁️ Publicar Examen</button>
+                    <button onclick="abrirModalMaterial()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-indigo-600/20">☁️ Publicar Examen</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="grid-materiales-admin">
                     ${dbMateriales.map((m, idx) => `
@@ -420,7 +432,6 @@
             renderAdminMateriales();
         }
 
-        // PORTAL ESTUDIANTE DINÁMICO (MUESTRA LAS NOTAS Y ASISTENCIA REALES DEL ALUMNO)
         function initStudentPanel() {
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('app-screen').classList.remove('hidden');
