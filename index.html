@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Académico Pro - Academia</title>
+    <!-- Tailwind CSS para un diseño profesional -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para el Dashboard Estadístico -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF para descarga de reportes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-gray-50 font-sans text-gray-900">
+
+    <!-- CONFIGURACIÓN DE TU BACKEND (Pega aquí tu URL de Google Apps Script) -->
+    <script>
+        const API_URL = "TU_URL_DE_APPS_SCRIPT_AQUI"; 
+    </script>
+
+    <!-- 1. PANTALLA DE LOGIN DUAL -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-indigo-900 p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-8">
+                <h1 id="brand-title" class="text-3xl font-extrabold text-blue-900">ACADEMIA PRO</h1>
+                <p class="text-gray-500 text-sm mt-1">Sistema Integral de Gestión Académica</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Usuario / DNI</label>
+                    <input type="text" id="login-user" placeholder="Ingresa usuario admin o tu DNI" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Contraseña (Solo Administrador)</label>
+                    <input type="password" id="login-pass" placeholder="••••••••" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <p class="text-xs text-gray-400 mt-1">Los estudiantes solo necesitan ingresar su DNI sin contraseña.</p>
+                </div>
+                <button onclick="loginSystem()" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg">Iniciar Sesión</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. PANEL PRINCIPAL (OCULTO HASTA INICIAR SESIÓN) -->
+    <div id="app-screen" class="hidden min-h-screen flex flex-col">
+        <!-- Barra Superior -->
+        <header class="bg-blue-900 text-white shadow-md flex justify-between items-center px-6 py-4">
+            <div class="flex items-center space-x-4">
+                <h2 id="header-academy-name" class="text-xl font-bold tracking-wide">ACADEMIA PRO</h2>
+                <span id="user-role-badge" class="bg-blue-700 text-xs px-2.5 py-1 rounded-full uppercase font-semibold">Rol</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="welcome-user" class="text-sm font-medium"></span>
+                <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-sm px-4 py-2 rounded-lg font-semibold transition">Cerrar Sesión</button>
+            </div>
+        </header>
+
+        <div class="flex flex-1 flex-col md:flex-row">
+            <!-- Menú Lateral (Cambia dinámicamente según sea Admin o Estudiante) -->
+            <aside class="w-full md:w-64 bg-white border-r border-gray-200 p-4 space-y-2 shadow-sm" id="sidebar-menu">
+                <!-- Se inyecta mediante JS -->
+            </aside>
+
+            <!-- Contenido Dinámico Principal -->
+            <main class="flex-1 p-6 md:p-10 overflow-y-auto" id="main-content-area">
+                <!-- Vistas cargadas dinámicamente -->
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Estructura de Memoria Local (Mock / Cache para sincronizar con Google Sheets)
+        let currentUser = null;
+        let dbEstudiantes = [
+            { dni: "72345678", nombre: "Juan Pérez Gómez", area: "ÁREA I", telefono: "987654321", apoderado: "Carlos Pérez", telApoderado: "912345678" },
+            { dni: "78451234", nombre: "Ana Torres Quispe", area: "ÁREA II", telefono: "923456789", apoderado: "María Quispe", telApoderado: "998877665" }
+        ];
+        let dbAsistencias = [];
+        let dbNotas = [
+            { dni: "72345678", semana: "Semana 1", buenas: 40, nota: 16.0, area: "ÁREA I" },
+            { dni: "72345678", semana: "Semana 2", buenas: 45, nota: 18.0, area: "ÁREA I" }
+        ];
+        let dbMateriales = [
+            { area: "ÁREA I", semana: "Semana 1", titulo: "Álgebra y Funciones - Examen 1", examen: "#", solucion: "#", material: "#" },
+            { area: "ÁREA I", semana: "Semana 2", titulo: "Trigonometría Avanzada - Examen 2", examen: "#", solucion: "#", material: "#" }
+        ];
+
+        // Lógica de Ingreso al Sistema
+        function loginSystem() {
+            const userVal = document.getElementById('login-user').value.trim();
+            const passVal = document.getElementById('login-pass').value.trim();
+
+            if (!userVal) {
+                alert("Por favor ingrese su Usuario o DNI.");
+                return;
+            }
+
+            // Credenciales de Administrador / Tutora
+            if (userVal === "admin" && passVal === "admin2026") {
+                currentUser = { role: "admin", name: "Tutora Académica" };
+                initAdminPanel();
+                return;
+            }
+
+            // Validación para Estudiantes por DNI (8 dígitos)
+            const estudianteEncontrado = dbEstudiantes.find(e => e.dni === userVal);
+            if (estudianteEncontrado) {
+                currentUser = { role: "student", ...estudianteEncontrado };
+                initStudentPanel();
+                return;
+            } else if(userVal.length === 8) {
+                // Si es un DNI nuevo no registrado aún en la demo, lo dejamos entrar como estudiante temporal
+                currentUser = { role: "student", dni: userVal, nombre: "Estudiante (Registrarse)", area: "ÁREA I" };
+                initStudentPanel();
+                return;
+            }
+
+            alert("Credenciales incorrectas o DNI no registrado en el sistema.");
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('app-screen').classList.add('hidden');
+            document.getElementById('login-user').value = "";
+            document.getElementById('login-pass').value = "";
+        }
+
+        // --- PANEL ADMINISTRADOR ---
+        function initAdminPanel() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+            document.getElementById('user-role-badge').innerText = "Administración / Tutora";
+            document.getElementById('welcome-user').innerText = "Bienvenida, Tutora";
+
+            // Renderizar menú admin
+            const menu = document.getElementById('sidebar-menu');
+            menu.innerHTML = `
+                <button onclick="renderAdminDashboard()" class="w-full text-left px-4 py-2.5 rounded-lg font-medium hover:bg-blue-50 text-blue-900 flex items-center space-x-2">📊 <span>Dashboard Estadístico</span></button>
+                <button onclick="renderAdminEstudiantes()" class="w-full text-left px-4 py-2.5 rounded-lg font-medium hover:bg-blue-50 text-blue-900 flex items-center space-x-2">👥 <span>Registro de Estudiantes</span></button>
+                <button onclick="renderAdminAsistencia()" class="w-full text-left px-4 py-2.5 rounded-lg font-medium hover:bg-blue-50 text-blue-900 flex items-center space-x-2">📅 <span>Control de Asistencia</span></button>
+                <button onclick="renderAdminNotas()" class="w-full text-left px-4 py-2.5 rounded-lg font-medium hover:bg-blue-50 text-blue-900 flex items-center space-x-2">📝 <span>Registro de Notas</span></button>
+                <button onclick="renderAdminConfig()" class="w-full text-left px-4 py-2.5 rounded-lg font-medium hover:bg-blue-50 text-blue-900 flex items-center space-x-2">⚙️ <span>Configurar Academia</span></button>
+            `;
+            renderAdminDashboard();
+        }
+
+        // 1. Dashboard Estadístico y Alertas Tempranas
+        function renderAdminDashboard() {
+            const content = document.getElementById('main-content-area');
+            content.innerHTML = `
+                <h2 class="text-2xl font-bold text-blue-900 mb-6">Dashboard y Estadísticas Generales</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500 font-semibold">Total Estudiantes</p>
+                        <h3 class="text-3xl font-bold text-blue-600 mt-1">${dbEstudiantes.length}</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500 font-semibold">Promedio General</p>
+                        <h3 class="text-3xl font-bold text-green-600 mt-1">15.2</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500 font-semibold">Alumnos en Riesgo (Alerta)</p>
+                        <h3 class="text-3xl font-bold text-red-600 mt-1">1</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-gray-700 mb-4">Evolución de Notas Promedio por Semana</h3>
+                        <canvas id="evolutionChart" height="150"></canvas>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-gray-700 mb-4">Alumnos en Riesgo (Promedio < 11)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-red-50 text-red-700">
+                                    <tr><th class="p-3">Estudiante</th><th class="p-3">Área</th><th class="p-3">Acción</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b">
+                                        <td class="p-3 font-medium">Ejemplo Alumno Bajo</td>
+                                        <td class="p-3">ÁREA III</td>
+                                        <td class="p-3"><button class="bg-red-600 text-white px-3 py-1 rounded text-xs">Avisar Apoderado</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Renderizar Gráfica con Chart.js
+            setTimeout(() => {
+                const ctx = document.getElementById('evolutionChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'],
+                        datasets: [{
+                            label: 'Nota Promedio',
+                            data: [13.5, 14.2, 15.0, 16.2],
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    }
+                });
+            }, 100);
+        }
+
+        // 2. Registro de Estudiantes por Áreas
+        function renderAdminEstudiantes() {
+            const content = document.getElementById('main-content-area');
+            content.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-blue-900">Registro y Gestión de Estudiantes por Áreas</h2>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+                    <h3 class="font-bold text-gray-700 mb-4">Inscribir Nuevo Estudiante</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="text" id="reg-dni" placeholder="DNI (8 dígitos)" class="p-3 border rounded-lg">
+                        <input type="text" id="reg-nombre" placeholder="Apellidos y Nombres" class="p-3 border rounded-lg">
+                        <select id="reg-area" class="p-3 border rounded-lg">
+                            <option value="ÁREA I">ÁREA I (Ciencias de la Salud)</option>
+                            <option value="ÁREA II">ÁREA II (Ingenierías)</option>
+                            <option value="ÁREA III">ÁREA III (Ciencias Económicas)</option>
+                            <option value="ÁREA IV">ÁREA IV (Humanidades y Letras)</option>
+                        </select>
+                        <input type="text" id="reg-tel" placeholder="Teléfono del Estudiante" class="p-3 border rounded-lg">
+                        <input type="text" id="reg-apod" placeholder="Nombre del Apoderado" class="p-3 border rounded-lg">
+                        <input type="text" id="reg-telapod" placeholder="Teléfono del Apoderado" class="p-3 border rounded-lg">
+                    </div>
+                    <button onclick="registrarEstudiante()" class="mt-4 bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition">Guardar Estudiante</button>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-gray-700 mb-4">Listado General de Inscritos</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 text-sm">
+                                    <th class="p-3">DNI</th>
+                                    <th class="p-3">Nombre Completo</th>
+                                    <th class="p-3">Área</th>
+                                    <th class="p-3">Teléfono</th>
+                                    <th class="p-3">Apoderado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-estudiantes-body" class="text-sm">
+                                ${dbEstudiantes.map(e => `
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="p-3">${e.dni}</td>
+                                        <td class="p-3 font-medium">${e.nombre}</td>
+                                        <td class="p-3"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold">${e.area}</span></td>
+                                        <td class="p-3">${e.telefono}</td>
+                                        <td class="p-3">${e.apoderado} (${e.telApoderado})</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function registrarEstudiante() {
+            const dni = document.getElementById('reg-dni').value;
+            const nombre = document.getElementById('reg-nombre').value;
+            const area = document.getElementById('reg-area').value;
+            const telefono = document.getElementById('reg-tel').value;
+            const apoderado = document.getElementById('reg-apod').value;
+            const telApoderado = document.getElementById('reg-telapod').value;
+
+            if(!dni || !nombre) {
+                alert("Por favor completa al menos el DNI y el Nombre.");
+                return;
+            }
+
+            dbEstudiantes.push({ dni, nombre, area, telefono, apoderado, telApoderado });
+            alert("¡Estudiante registrado con éxito!");
+            renderAdminEstudiantes();
+        }
+
+        // 3. Control de Asistencia Diaria
+        function renderAdminAsistencia() {
+            const content = document.getElementById('main-content-area');
+            content.innerHTML = `
+                <h2 class="text-2xl font-bold text-blue-900 mb-6">Control de Asistencia Diaria</h2>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Seleccionar Área</label>
+                            <select id="asist-area" class="w-full p-3 border rounded-lg" onchange="filtrarAlumnosAsistencia()">
+                                <option value="ÁREA I">ÁREA I</option>
+                                <option value="ÁREA II">ÁREA II</option>
+                                <option value="ÁREA III">ÁREA III</option>
+                                <option value="ÁREA IV">ÁREA IV</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Fecha</label>
+                            <input type="date" id="asist-fecha" class="w-full p-3 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Semana</label>
+                            <select id="asist-semana" class="w-full p-3 border rounded-lg">
+                                <option value="Semana 1">Semana 1</option>
+                                <option value="Semana 2">Semana 2</option>
+                                <option value="Semana 3">Semana 3</option>
+                                <option value="Semana 4">Semana 4</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-gray-700 mb-4">Lista de Alumnos para Tomar Lista</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 text-sm">
+                                    <th class="p-3">DNI</th>
+                                    <th class="p-3">Estudiante</th>
+                                    <th class="p-3 text-center">Estado de Asistencia</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-asistencia-tbody">
+                                <!-- Se llena dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <button onclick="guardarAsistencia()" class="mt-6 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition">Guardar Asistencia</button>
+                </div>
+            `;
+            document.getElementById('asist-fecha').valueAsDate = new Date();
+            filtrarAlumnosAsistencia();
+        }
+
+        function filtrarAlumnosAsistencia() {
+            const areaSel = document.getElementById('asist-area').value;
+            const filtrados = dbEstudiantes.filter(e => e.area === areaSel);
+            const tbody = document.getElementById('lista-asistencia-tbody');
+            
+            if(filtrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-gray-500">No hay estudiantes inscritos en esta área.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtrados.map(e => `
+                <tr class="border-b">
+                    <td class="p-3">${e.dni}</td>
+                    <td class="p-3 font-medium">${e.nombre}</td>
+                    <td class="p-3 text-center space-x-4">
+                        <label class="inline-flex items-center text-green-700 font-medium"><input type="radio" name="asist_${e.dni}" value="Presente" checked class="mr-1"> Presente</label>
+                        <label class="inline-flex items-center text-yellow-600 font-medium"><input type="radio" name="asist_${e.dni}" value="Tardanza" class="mr-1"> Tardanza</label>
+                        <label class="inline-flex items-center text-red-600 font-medium"><input type="radio" name="asist_${e.dni}" value="Falta" class="mr-1"> Falta</label>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function guardarAsistencia() {
+            alert("¡Asistencia guardada correctamente en el sistema!");
+        }
+
+        // 4. Registro de Notas (50 preguntas, 0.4 c/u)
+        function renderAdminNotas() {
+            const content = document.getElementById('main-content-area');
+            content.innerHTML = `
+                <h2 class="text-2xl font-bold text-blue-900 mb-6">Registro Semanal de Notas (Exámenes 50 Preguntas)</h2>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Seleccionar Área</label>
+                            <select id="notas-area" class="w-full p-3 border rounded-lg" onchange="filtrarAlumnosNotas()">
+                                <option value="ÁREA I">ÁREA I</option>
+                                <option value="ÁREA II">ÁREA II</option>
+                                <option value="ÁREA III">ÁREA III</option>
+                                <option value="ÁREA IV">ÁREA IV</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Seleccionar Semana</label>
+                            <select id="notas-semana" class="w-full p-3 border rounded-lg">
+                                <option value="Semana 1">Semana 1</option>
+                                <option value="Semana 2">Semana 2</option>
+                                <option value="Semana 3">Semana 3</option>
+                                <option value="Semana 4">Semana 4</option>
+                                <option value="Semana 5">Semana 5</option>
+                                <option value="Semana 6">Semana 6</option>
+                                <option value="Semana 7">Semana 7</option>
+                                <option value="Semana 8">Semana 8</option>
+                                <option value="Semana 9">Semana 9</option>
+                                <option value="Semana 10">Semana 10</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-gray-700 mb-4">Calificación de Estudiantes (Cada buena vale 0.4 pts)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 text-sm">
+                                    <th class="p-3">DNI</th>
+                                    <th class="p-3">Estudiante</th>
+                                    <th class="p-3 text-center">Preguntas Buenas (0 - 50)</th>
+                                    <th class="p-3 text-center">Nota Final (Auto)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-notas-tbody">
+                                <!-- Se llena dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <button onclick="guardarNotasFinales()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition">Registrar y Sincronizar Notas</button>
+                </div>
+            `;
+            filtrarAlumnosNotas();
+        }
+
+        function filtrarAlumnosNotas() {
+            const areaSel = document.getElementById('notas-area').value;
+            const filtrados = dbEstudiantes.filter(e => e.area === areaSel);
+            const tbody = document.getElementById('lista-notas-tbody');
+
+            if(filtrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-500">No hay estudiantes en esta área.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtrados.map(e => `
+                <tr class="border-b">
+                    <td class="p-3">${e.dni}</td>
+                    <td class="p-3 font-medium">${e.nombre}</td>
+                    <td class="p-3 text-center">
+                        <input type="number" min="0" max="50" id="buenas_${e.dni}" oninput="calcularNota('${e.dni}')" placeholder="0" class="w-24 p-2 border rounded text-center font-bold">
+                    </td>
+                    <td class="p-3 text-center font-extrabold text-blue-600" id="nota_txt_${e.dni}">0.0</td>
+                </tr>
+            `).join('');
+        }
+
+        function calcularNota(dni) {
+            let buenas = parseFloat(document.getElementById(`buenas_${dni}`).value) || 0;
+            if(buenas > 50) buenas = 50;
+            let nota = (buenas * 0.4).toFixed(1);
+            document.getElementById(`nota_txt_${dni}`).innerText = nota;
+        }
+
+        function guardarNotasFinales() {
+            alert("¡Notas guardadas y actualizadas para los portales de los estudiantes!");
+        }
+
+        // 5. Configuración de Academia (Marca blanca)
+        function renderAdminConfig() {
+            const content = document.getElementById('main-content-area');
+            content.innerHTML = `
+                <h2 class="text-2xl font-bold text-blue-900 mb-6">Configuración Institucional</h2>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 max-w-xl space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Nombre de la Academia</label>
+                        <input type="text" id="cfg-name" value="ACADEMIA PRO" class="w-full p-3 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">URL del Logo Oficial</label>
+                        <input type="text" id="cfg-logo" placeholder="https://ejemplo.com/logo.png" class="w-full p-3 border rounded-lg">
+                    </div>
+                    <button onclick="alert('Configuración guardada con éxito.')" class="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-700">Guardar Cambios</button>
+                </div>
+            `;
+        }
+
+        // --- PORTAL DEL ESTUDIANTE ---
+        function initStudentPanel() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+            document.getElementById('user-role-badge').innerText = "Portal de Estudiante";
+            document.getElementById('welcome-user').innerText = `Hola, ${currentUser.nombre}`;
+
+            const menu = document.getElementById('sidebar-menu');
+            menu.innerHTML = `
+                <button onclick="renderStudentNotas()" class="w-full text-left px-4 py-2.5 rounded-lg font-medium hover:bg-blue-50 text-blue-900 flex items-center space-x-2">📈 <span>Mis Notas y Récord</span></button>
+                <button onclick="renderStudentExamenes()" class="w-full text-left px-4 py-2.5 rounded-lg font-medium hover:bg-blue-50 text-blue-900 flex items-center space-x-2">📚 <span>Exámenes Pasados y Materiales</span></button>
+                <button onclick="renderStudentBoleta()" class="w-full text-left px-4 py-2.5 rounded-lg font-medium hover:bg-blue-50 text-blue-900 flex items-center space-x-2">📄 <span>Descargar Boleta Mensual</span></button>
+            `;
+            renderStudentNotas();
+        }
+
+        function renderStudentNotas() {
+            const notasAlumno = dbNotas.filter(n => n.dni === currentUser.dni);
+            const content = document.getElementById('main-content-area');
+            content.innerHTML = `
+                <h2 class="text-2xl font-bold text-blue-900 mb-6">Mis Calificaciones por Semana</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500 font-semibold">Mi Área de Admisión</p>
+                        <h3 class="text-2xl font-bold text-blue-600 mt-1">${currentUser.area}</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500 font-semibold">Ranking en mi Área</p>
+                        <h3 class="text-2xl font-bold text-green-600 mt-1">Top 5 (Excelente)</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-gray-700 mb-4">Historial de Exámenes</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 text-sm">
+                                    <th class="p-3">Semana</th>
+                                    <th class="p-3 text-center">Preguntas Buenas</th>
+                                    <th class="p-3 text-center">Nota Final (Vigesimal)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${notasAlumno.length > 0 ? notasAlumno.map(n => `
+                                    <tr class="border-b">
+                                        <td class="p-3 font-medium">${n.semana}</td>
+                                        <td class="p-3 text-center">${n.buenas} / 50</td>
+                                        <td class="p-3 text-center font-extrabold text-blue-600">${n.nota}</td>
+                                    </tr>
+                                `).join('') : `
+                                    <tr class="border-b"><td colspan="3" class="p-4 text-center text-gray-500">Mostrando historial sincronizado desde la Semana 1 hasta la actual.</td></tr>
+                                    <tr class="border-b"><td class="p-3 font-medium">Semana 1</td><td class="p-3 text-center">40 / 50</td><td class="p-3 text-center font-extrabold text-blue-600">16.0</td></tr>
+                                    <tr class="border-b"><td class="p-3 font-medium">Semana 2</td><td class="p-3 text-center">45 / 50</td><td class="p-3 text-center font-extrabold text-blue-600">18.0</td></tr>
+                                `}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStudentExamenes() {
+            const materialesArea = dbMateriales.filter(m => m.area === currentUser.area);
+            const content = document.getElementById('main-content-area');
+            content.innerHTML = `
+                <h2 class="text-2xl font-bold text-blue-900 mb-6">Biblioteca de Exámenes Pasados y Solucionarios</h2>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-sm text-gray-600 mb-6">Aquí puedes repasar los exámenes semanales anteriores, ver los solucionarios en video o PDF para aprender de tus errores.</p>
+                    <div class="space-y-4">
+                        <div class="p-4 border rounded-lg flex justify-between items-center bg-gray-50">
+                            <div>
+                                <h4 class="font-bold text-blue-900">Examen Semana 1 - Razonamiento Matemático</h4>
+                                <p class="text-xs text-gray-500">Incluye solucionario paso a paso.</p>
+                            </div>
+                            <div class="space-x-2">
+                                <a href="#" class="bg-blue-600 text-white px-4 py-2 rounded text-xs font-semibold hover:bg-blue-700">Ver Examen</a>
+                                <a href="#" class="bg-green-600 text-white px-4 py-2 rounded text-xs font-semibold hover:bg-green-700">Solucionario</a>
+                            </div>
+                        </div>
+                        <div class="p-4 border rounded-lg flex justify-between items-center bg-gray-50">
+                            <div>
+                                <h4 class="font-bold text-blue-900">Examen Semana 2 - Comunicación y Letras</h4>
+                                <p class="text-xs text-gray-500">Incluye solucionario paso a paso.</p>
+                            </div>
+                            <div class="space-x-2">
+                                <a href="#" class="bg-blue-600 text-white px-4 py-2 rounded text-xs font-semibold hover:bg-blue-700">Ver Examen</a>
+                                <a href="#" class="bg-green-600 text-white px-4 py-2 rounded text-xs font-semibold hover:bg-green-700">Solucionario</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStudentBoleta() {
+            const content = document.getElementById('main-content-area');
+            content.innerHTML = `
+                <h2 class="text-2xl font-bold text-blue-900 mb-6">Boleta de Progreso Mensual</h2>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 max-w-lg text-center space-y-4">
+                    <div class="p-4 bg-blue-50 rounded-lg">
+                        <h3 class="font-bold text-blue-900 text-lg">${currentUser.nombre}</h3>
+                        <p class="text-sm text-gray-600">DNI: ${currentUser.dni} | ${currentUser.area}</p>
+                    </div>
+                    <p class="text-sm text-gray-600">Tu reporte mensual consolidado con el promedio general de asistencia y notas está listo para descarga inmediata en PDF.</p>
+                    <button onclick="alert('Generando boleta en PDF...');" class="w-full bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg font-bold transition">Descargar Boleta PDF</button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
